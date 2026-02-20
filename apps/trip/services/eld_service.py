@@ -1,14 +1,28 @@
 from datetime import datetime, time, timedelta, date
+from django.utils import timezone
+from loguru import logger
 from apps.trip.constants import DriverStatus
 from apps.trip.models import ELDLog, TimeLog, Trip
 from apps.trip.services.geo_service import GeoService
 
+AVERAGE_SPEED_MPH = 60  # Used for mileage calculations when not provided
+TOTAL_SECONDS_IN_DAY = 24 * 3600
+
+ON_DUTY_CYCLE_LIMIT = 70  # hours in 8-day cycle
+ON_DUTY_HOURS_LIMIT = 14  # hours of on-duty allowed in a day
+DRIVING_HOURS_LIMIT = 11  # hours of driving allowed in a day
+DRIVING_BEFORE_BREAK_LIMIT = 8  # hours of driving before a 30 min break
+DAILY_RESET_HOURS = 10  # hours of rest for a daily reset (sleeper berth)
+FUEL_MILEAGE_LIMIT = 1000  # miles before a fueling stop is required
+
 
 class EldService:
-    def __init__(self, trip_id: int, on_duty_cycle_limit: int = 70) -> None:
+    def __init__(
+        self, trip_id: int, on_duty_cycle_limit: int = ON_DUTY_CYCLE_LIMIT
+    ) -> None:
         self.trip = Trip.objects.get(id=trip_id)
         # Ensure we start at a clean datetime
-        self.current_time = self.trip.created_at or datetime.now()
+        self.current_time = self.trip.created_at
 
         # State tracking
         self.distance_remaining = 0
@@ -24,10 +38,10 @@ class EldService:
         log, _ = ELDLog.objects.get_or_create(trip=self.trip, date=log_date)
         return log
 
-    def _seconds_until_midnight(self, dt: datetime):
-        tomorrow = dt.date() + timedelta(days=1)
-        midnight = datetime.combine(tomorrow, time(0, 0))
-        return (midnight - dt).total_seconds()
+    def _seconds_until_midnight(self, dt: timezone):
+        start_of_day = dt.replace(hour=0, minute=0, second=0, microsecond=0)
+        seconds_passed = (dt - start_of_day).total_seconds()
+        return TOTAL_SECONDS_IN_DAY - seconds_passed
 
     def _create_record(self, status, hours, location, remarks):
         log_date = self.current_time.date()
@@ -85,21 +99,27 @@ class EldService:
         else:
             self._create_record(status, duration_hours, location, remarks)
 
-    def simulate_driving(self, total_distance, avg_speed=60):
+    def simulate_driving(self, total_distance, avg_speed=AVERAGE_SPEED_MPH):
+        logger.info(
+            f"Simulating driving for Trip ID: {self.trip.id} - Total Distance: {total_distance} miles at Avg Speed: {avg_speed} mph"
+        )
         self.distance_remaining = total_distance
 
         while self.distance_remaining > 0:
             # 1. Determine constraints
-            drive_left = 11 - self.driving_hrs_today
+            logger.info(
+                f"Current Time: {self.current_time}, Distance Remaining: {self.distance_remaining} miles, Driving Hrs Today: {self.driving_hrs_today}, Break Clock: {self.break_clock_driving}, Cycle Hrs Remaining: {self.cycle_hrs_remaining}"
+            )
+            drive_left = DRIVING_HOURS_LIMIT - self.driving_hrs_today
 
             # 14-hour window is: 14 - (time elapsed since day started)
             elapsed_today = (
                 self.current_time - self.day_start_time
             ).total_seconds() / 3600
-            window_left = max(0, 14 - elapsed_today)
+            window_left = max(0, ON_DUTY_HOURS_LIMIT - elapsed_today)
 
-            break_left = 8 - self.break_clock_driving
-            fuel_left = (1000 - self.miles_since_fueling) / avg_speed
+            break_left = DRIVING_BEFORE_BREAK_LIMIT - self.break_clock_driving
+            fuel_left = (FUEL_MILEAGE_LIMIT - self.miles_since_fueling) / avg_speed
 
             # How much can we drive before we hit ANY limit?
             can_drive_hours = min(drive_left, window_left, fuel_left, break_left)
@@ -114,7 +134,9 @@ class EldService:
                 else:
                     # Hit 11hr drive limit or 14hr window: Must take 10hr reset
                     self.add_log_entry(
-                        DriverStatus.SLEEPER_BERTH, 10, remarks="10hr Daily Reset"
+                        DriverStatus.SLEEPER_BERTH,
+                        DAILY_RESET_HOURS,
+                        remarks="10hr Daily Reset",
                     )
                 continue
 
@@ -129,30 +151,35 @@ class EldService:
             self.miles_since_fueling += distance_covered
 
             # 3. Handle specific triggers
-            if self.miles_since_fueling >= 1000:
+            if self.miles_since_fueling >= FUEL_MILEAGE_LIMIT:
                 self.add_log_entry(DriverStatus.ON_DUTY, 0.5, remarks="Fueling Stop")
                 self.miles_since_fueling = 0
 
     def generate_trip(self, route_data):
-        # 1. Pre-Trip
+        logger.info(
+            f"Generating trip logs for Trip ID: {self.trip.id} with route data: {route_data}"
+        )
+
+        logger.info(f"Adding pre-trip inspection log for Trip ID: {self.trip.id}")
         self.add_log_entry(DriverStatus.ON_DUTY, 0.25, remarks="Pre-trip Inspection")
 
-        # 2. Current to Pickup
+        logger.info(f"Simulating drive to pickup location for Trip ID: {self.trip.id}")
         self.simulate_driving(route_data["to_pickup_miles"])
 
-        # 3. Loading (1 Hour) - Counts against 14hr window
+        logger.info(f"Adding loading log for Trip ID: {self.trip.id}")
         self.add_log_entry(DriverStatus.ON_DUTY, 1.0, remarks="Loading Freight")
 
-        # 4. Pickup to Delivery
+        logger.info(f"Simulating drive to dropoff location for Trip ID: {self.trip.id}")
         self.simulate_driving(route_data["to_dropoff_miles"])
 
-        # 5. Dropoff (1 Hour)
+        logger.info(f"Adding unloading log for Trip ID: {self.trip.id}")
         self.add_log_entry(DriverStatus.ON_DUTY, 1.0, remarks="Unloading Freight")
 
-        # 6. Final Inspection
+        logger.info(f"Adding post-trip inspection log for Trip ID: {self.trip.id}")
         self.add_log_entry(DriverStatus.ON_DUTY, 0.25, remarks="Post-trip Inspection")
 
     def generate_full_trip(self):
+        logger.info(f"Generating full trip for Trip ID: {self.trip.id}")
         route_data = GeoService.get_route_data(
             self.trip.current_location,
             self.trip.pickup_location,

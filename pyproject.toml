@@ -9,5 +9,6 @@ dependencies = [
     "django-cors-headers>=4.9.0",
     "djangorestframework>=3.16.1",
     "ipython>=9.10.0",
+    "loguru>=0.7.3",
     "requests>=2.32.5",
 ]

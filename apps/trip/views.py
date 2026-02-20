@@ -1,3 +1,4 @@
+from loguru import logger
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from apps.trip.models import Trip
@@ -14,20 +15,20 @@ class TripViewSet(viewsets.ModelViewSet):
         return TripListSerializer
 
     def create(self, request, *args, **kwargs):
+        logger.info(f"Received Trip creation request: {request.data}")
         serializer = self.get_serializer(data=request.data)
-        serializer.is_is_valid(raise_exception=True)
+        serializer.is_valid(raise_exception=True)
 
-        # 1. Save the Trip
         trip = serializer.save()
+        logger.info(f"Trip created with ID: {trip.id}")
 
-        # 2. Run the Simulation
         try:
+            logger.info(f"Starting ELD simulation for Trip ID: {trip.id}")
             service = EldService(trip.id)
             service.generate_full_trip()
         except Exception as e:
-            # If geo-service fails or logic breaks, cleanup and return error
+            logger.error(f"Error during ELD simulation for Trip ID {trip.id}: {str(e)}")
             trip.delete()
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 3. Return the detailed view of the generated trip
         return Response(TripDetailSerializer(trip).data, status=status.HTTP_201_CREATED)
