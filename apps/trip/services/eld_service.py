@@ -185,4 +185,6 @@ class EldService:
             self.trip.pickup_location,
             self.trip.dropoff_location,
         )
-        self.generate_trip(route_data)
+        self.trip.route_geometry = route_data["geometry"]
+        self.trip.save()
+        self.generate_trip(route_data["metrics"])
