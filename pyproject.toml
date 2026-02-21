@@ -14,3 +14,25 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "requests>=2.32.5",
 ]
+
+[dependency-groups]
+dev = ["pre-commit>=4.5.1", "ruff>=0.15.2"]
+
+[tool.ruff.lint]
+# Enable Pyflakes (F), Pycodestyle (E, W), Isort (I), and Django (DJ)
+select = ["F", "E", "W", "I", "DJ", "B"]
+ignore = ["E501"]                        # Ignore line-too-long (let formatter handle it)
+
+[tool.ruff.lint.isort]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "django",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.lint.isort.sections]
+# Group Django imports together
+"django" = ["django"]
