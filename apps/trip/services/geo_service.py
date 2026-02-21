@@ -1,38 +1,96 @@
+from django.conf import settings
 from loguru import logger
-import requests
+from googlemaps import Client as GoogleMapsClient
+
+METERS_TO_MILES = 0.000621371
+SECONDS_TO_HOURS = 1 / 3600
 
 
 class GeoService:
-    @staticmethod
-    def get_coords(address):
-        """Convert address text to coordinates using Nominatim (Free)"""
-        url = f"https://nominatim.openstreetmap.org/search?q={address}&format=json&limit=1"
-        headers = {"User-Agent": "EldApp-Assessment"}
-        response = requests.get(url, headers=headers).json()
-        if response:
-            return response[0]["lon"], response[0]["lat"]
-        return None
+    client: GoogleMapsClient = GoogleMapsClient(key=settings.GOOGLE_MAPS_API_KEY)
 
     @classmethod
-    def get_route_data(cls, current, pickup, dropoff):
-        logger.info(f"Fetching route data for Current: {current}, Pickup: {pickup}, Dropoff: {dropoff}")
-        curr_lon, curr_lat = cls.get_coords(current)
-        pick_lon, pick_lat = cls.get_coords(pickup)
-        drop_lon, drop_lat = cls.get_coords(dropoff)
+    def _fetch_google_route(cls, origin: str, destination: str):
+        """Helper to fetch directions between two points"""
+        try:
+            result = cls.client.directions(origin, destination, mode="driving")
 
-        logger.info(f"Fetching Leg 1 (Current to Pickup) from OSRM: {curr_lon},{curr_lat} to {pick_lon},{pick_lat}")
-        leg1 = cls._fetch_osrm(curr_lon, curr_lat, pick_lon, pick_lat)
+            if not result:
+                return None
 
-        logger.info(f"Fetching Leg 2 (Pickup to Dropoff) from OSRM: {pick_lon},{pick_lat} to {drop_lon},{drop_lat}")
-        leg2 = cls._fetch_osrm(pick_lon, pick_lat, drop_lon, drop_lat)
+            route = result[0]["legs"][0]
+            return {
+                "distance_meters": route["distance"]["value"],
+                "duration_seconds": route["duration"]["value"],
+                "polyline": result[0]["overview_polyline"]["points"],
+                "start_coords": route["start_location"],
+                "end_coords": route["end_location"],
+                "bounds": result[0]["bounds"],
+            }
+        except Exception as e:
+            logger.error(f"Directions error: {e}")
+            return None
+
+    @classmethod
+    def get_route_data(cls, current: str, pickup: str, dropoff: str):
+        """
+        Calculates trip metrics and geometry using Google Routes/Directions.
+        """
+        logger.info(f"Fetching route data: {current=} -> {pickup=} -> {dropoff=}")
+
+        leg1 = cls._fetch_google_route(current, pickup)
+        leg2 = cls._fetch_google_route(pickup, dropoff)
+
+        if not leg1 or not leg2:
+            raise ValueError("Routing service failed to calculate legs.")
 
         return {
-            "to_pickup_miles": leg1["distance"] * 0.000621371,  
-            "to_dropoff_miles": leg2["distance"] * 0.000621371,
-            "total_duration_hrs": (leg1["duration"] + leg2["duration"]) / 3600,
+            "metrics": {
+                "to_pickup_miles": round(leg1["distance_meters"] * METERS_TO_MILES, 2),
+                "to_dropoff_miles": round(leg2["distance_meters"] * METERS_TO_MILES, 2),
+                "total_miles": round(
+                    (leg1["distance_meters"] + leg2["distance_meters"])
+                    * METERS_TO_MILES,
+                    2,
+                ),
+                "total_duration_hrs": round(
+                    (leg1["duration_seconds"] + leg2["duration_seconds"])
+                    * SECONDS_TO_HOURS,
+                    2,
+                ),
+                # Raw data for ELD Service "Actual Time" calculations
+                "raw_seconds": leg1["duration_seconds"] + leg2["duration_seconds"],
+                "raw_meters": leg1["distance_meters"] + leg2["distance_meters"],
+            },
+            "geometry": {
+                "polyline": leg1["polyline"] + leg2["polyline"],
+                "pickup_coords": leg1["end_coords"],
+                "dropoff_coords": leg2["end_coords"],
+                "bounds": cls._calculate_bounds([leg1, leg2]),
+            },
         }
 
     @staticmethod
-    def _fetch_osrm(lon1, lat1, lon2, lat2):
-        url = f"http://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=false"
-        return requests.get(url).json()["routes"][0]
+    def _calculate_bounds(legs):
+        return {
+            "northeast": {
+                "lat": max(
+                    legs[0]["bounds"]["northeast"]["lat"],
+                    legs[1]["bounds"]["northeast"]["lat"],
+                ),
+                "lng": max(
+                    legs[0]["bounds"]["northeast"]["lng"],
+                    legs[1]["bounds"]["northeast"]["lng"],
+                ),
+            },
+            "southwest": {
+                "lat": min(
+                    legs[0]["bounds"]["southwest"]["lat"],
+                    legs[1]["bounds"]["southwest"]["lat"],
+                ),
+                "lng": min(
+                    legs[0]["bounds"]["southwest"]["lng"],
+                    legs[1]["bounds"]["southwest"]["lng"],
+                ),
+            },
+        }

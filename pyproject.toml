@@ -8,7 +8,9 @@ dependencies = [
     "django>=6.0.2",
     "django-cors-headers>=4.9.0",
     "djangorestframework>=3.16.1",
+    "googlemaps>=4.10.0",
     "ipython>=9.10.0",
     "loguru>=0.7.3",
+    "pydantic-settings>=2.13.1",
     "requests>=2.32.5",
 ]

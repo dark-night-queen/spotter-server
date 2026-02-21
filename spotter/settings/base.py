@@ -3,18 +3,17 @@ Django settings for apps project.
 """
 
 from pathlib import Path
-
+from .configs import configs, db_configs
 from .installed_apps import DEFAULT_APPS, SELF_APPS, THIRD_PARTY_APPS
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = configs.BASE_DIR
 
+SECRET_KEY = configs.SECRET_KEY
 
-SECRET_KEY = "django-insecure-(2=jp+*tl26jr59dzs=&u(+iu3d4n5!y=tnpm!ds7(tdmyiv#m"
+DEBUG = configs.DEBUG
 
-DEBUG = True
-
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = configs.ALLOWED_HOSTS
 
 
 # Application definition
@@ -23,6 +22,7 @@ INSTALLED_APPS = DEFAULT_APPS + SELF_APPS + THIRD_PARTY_APPS
 
 # Middleware
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -33,7 +33,9 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "spotter.urls"
-
+# TODO: Replace with CORS_ALLOWED_ORIGINS before production deploy
+# CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Admin Templates
 TEMPLATES = [
@@ -62,6 +64,18 @@ DATABASES = {
         "NAME": BASE_DIR / "db.sqlite3",
     }
 }
+
+# TODO: Replace the DB Engine
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": db_configs.dbname,
+#         "USER": db_configs.username,
+#         "PASSWORD": db_configs.password,
+#         "HOST": db_configs.host,
+#         "PORT": db_configs.port,
+#     }
+# }
 
 
 # Password validation
@@ -96,3 +110,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 STATIC_URL = "static/"
+
+
+# Google Maps API Key
+GOOGLE_MAPS_API_KEY = configs.GOOGLE_MAPS_API_KEY
