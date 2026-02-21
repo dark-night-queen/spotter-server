@@ -1,6 +1,7 @@
-from django.conf import settings
-from loguru import logger
 from googlemaps import Client as GoogleMapsClient
+from loguru import logger
+
+from django.conf import settings
 
 METERS_TO_MILES = 0.000621371
 SECONDS_TO_HOURS = 1 / 3600

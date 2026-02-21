@@ -2,8 +2,7 @@
 Django settings for apps project.
 """
 
-from pathlib import Path
-from .configs import configs, db_configs
+from .configs import configs
 from .installed_apps import DEFAULT_APPS, SELF_APPS, THIRD_PARTY_APPS
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.

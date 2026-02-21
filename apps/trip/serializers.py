@@ -1,5 +1,6 @@
 from rest_framework.serializers import ModelSerializer
-from apps.trip.models import Trip, ELDLog, TimeLog
+
+from apps.trip.models import ELDLog, TimeLog, Trip
 
 
 class TimeLogSerializer(ModelSerializer):

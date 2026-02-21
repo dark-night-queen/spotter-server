@@ -1,6 +1,9 @@
-from datetime import datetime, time, timedelta, date
-from django.utils import timezone
+from datetime import date, timedelta
+
 from loguru import logger
+
+from django.utils import timezone
+
 from apps.trip.constants import DriverStatus
 from apps.trip.models import ELDLog, TimeLog, Trip
 from apps.trip.services.geo_service import GeoService

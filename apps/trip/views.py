@@ -1,8 +1,9 @@
 from loguru import logger
-from rest_framework import viewsets, status
+from rest_framework import status, viewsets
 from rest_framework.response import Response
+
 from apps.trip.models import Trip
-from apps.trip.serializers import TripListSerializer, TripDetailSerializer
+from apps.trip.serializers import TripDetailSerializer, TripListSerializer
 from apps.trip.services.eld_service import EldService
 
 
