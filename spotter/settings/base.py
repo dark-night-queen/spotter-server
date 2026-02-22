@@ -12,7 +12,12 @@ SECRET_KEY = configs.SECRET_KEY
 
 DEBUG = configs.DEBUG
 
-ALLOWED_HOSTS = configs.ALLOWED_HOSTS
+ALLOWED_HOSTS = ALLOWED_HOSTS = [
+    "spotter-server.onrender.com",
+    "localhost",
+    "127.0.0.1",
+    ".onrender.com",  # This allows any render subdomain
+]
 
 
 # Application definition
@@ -35,6 +40,7 @@ ROOT_URLCONF = "spotter.urls"
 # TODO: Replace with CORS_ALLOWED_ORIGINS before production deploy
 # CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Admin Templates
 TEMPLATES = [
