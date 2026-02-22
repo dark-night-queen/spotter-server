@@ -11,6 +11,7 @@ dependencies = [
     "googlemaps>=4.10.0",
     "ipython>=9.10.0",
     "loguru>=0.7.3",
+    "psycopg>=3.3.3",
     "pydantic-settings>=2.13.1",
     "requests>=2.32.5",
 ]
