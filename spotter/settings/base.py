@@ -2,7 +2,7 @@
 Django settings for apps project.
 """
 
-from .configs import configs
+from .configs import configs, db_configs
 from .installed_apps import DEFAULT_APPS, SELF_APPS, THIRD_PARTY_APPS
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -56,25 +56,16 @@ WSGI_APPLICATION = "spotter.wsgi.application"
 
 
 # Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": db_configs.dbname,
+        "USER": db_configs.username,
+        "PASSWORD": db_configs.password,
+        "HOST": db_configs.host,
+        "PORT": db_configs.port,
     }
 }
-
-# TODO: Replace the DB Engine
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.postgresql",
-#         "NAME": db_configs.dbname,
-#         "USER": db_configs.username,
-#         "PASSWORD": db_configs.password,
-#         "HOST": db_configs.host,
-#         "PORT": db_configs.port,
-#     }
-# }
 
 
 # Password validation
