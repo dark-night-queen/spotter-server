@@ -2,6 +2,8 @@
 Django settings for apps project.
 """
 
+import os
+
 from .configs import configs, db_configs
 from .installed_apps import DEFAULT_APPS, SELF_APPS, THIRD_PARTY_APPS
 
@@ -28,6 +30,7 @@ INSTALLED_APPS = DEFAULT_APPS + SELF_APPS + THIRD_PARTY_APPS
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware"
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -37,8 +40,6 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "spotter.urls"
-# TODO: Replace with CORS_ALLOWED_ORIGINS before production deploy
-# CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Admin Templates
@@ -68,7 +69,7 @@ DATABASES = {
         "USER": db_configs.username,
         "PASSWORD": db_configs.password,
         "HOST": db_configs.host,
-        "POST": 6543,
+        "PORT": db_configs.port,
         "OPTIONS": {
             "sslmode": "require",
         },
@@ -106,5 +107,12 @@ USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
+
 STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles/")
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
