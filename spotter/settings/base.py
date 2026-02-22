@@ -40,7 +40,6 @@ ROOT_URLCONF = "spotter.urls"
 # TODO: Replace with CORS_ALLOWED_ORIGINS before production deploy
 # CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # Admin Templates
 TEMPLATES = [
