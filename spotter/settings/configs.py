@@ -26,7 +26,7 @@ class Configs(BaseSettings):
     # SECURITY WARNING: keep the secret key used in production secret!
     SECRET_KEY: str
     # SECURITY WARNING: don't run with debug turned on in production!
-    DEBUG: bool = True
+    DEBUG: bool
     ALLOWED_HOSTS: str = "*"  # Accept as string from env
 
     DATABASE: DatabaseConfigs = DatabaseConfigs()
