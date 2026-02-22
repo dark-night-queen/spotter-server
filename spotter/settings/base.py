@@ -68,7 +68,10 @@ DATABASES = {
         "USER": db_configs.username,
         "PASSWORD": db_configs.password,
         "HOST": db_configs.host,
-        "PORT": db_configs.port,
+        "POST": 6543,
+        "OPTIONS": {
+            "sslmode": "require",
+        },
     }
 }
 
