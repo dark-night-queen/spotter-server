@@ -6,5 +6,45 @@ dist/
 wheels/
 *.egg-info
 
+
+# Django media/static files
+/media
+/staticfiles
+/static
+
+
 # Virtual environments
 .venv
+*.env
+*.env.*
+
+
+# Flask-specific files
+instance/
+*.log
+*.pot
+*.mo
+
+
+# Database files
+*.db
+*.sqlite3
+
+
+# Pytest cache
+.pytest_cache/
+
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+
+
+# IDE-specific files
+.vscode/
+.idea/
+
+
+# MacOS-specific files
+.DS_Store

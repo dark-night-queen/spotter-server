@@ -33,14 +33,14 @@ class GeoService:
             return None
 
     @classmethod
-    def get_route_data(cls, current: str, pickup: str, dropoff: str):
+    def get_route_data(cls, current: str, pickup: str, drop_off: str):
         """
         Calculates trip metrics and geometry using Google Routes/Directions.
         """
-        logger.info(f"Fetching route data: {current=} -> {pickup=} -> {dropoff=}")
+        logger.info(f"Fetching route data: {current=} -> {pickup=} -> {drop_off=}")
 
         leg1 = cls._fetch_google_route(current, pickup)
-        leg2 = cls._fetch_google_route(pickup, dropoff)
+        leg2 = cls._fetch_google_route(pickup, drop_off)
 
         if not leg1 or not leg2:
             raise ValueError("Routing service failed to calculate legs.")
@@ -48,7 +48,9 @@ class GeoService:
         return {
             "metrics": {
                 "to_pickup_miles": round(leg1["distance_meters"] * METERS_TO_MILES, 2),
-                "to_dropoff_miles": round(leg2["distance_meters"] * METERS_TO_MILES, 2),
+                "to_drop_off_miles": round(
+                    leg2["distance_meters"] * METERS_TO_MILES, 2
+                ),
                 "total_miles": round(
                     (leg1["distance_meters"] + leg2["distance_meters"])
                     * METERS_TO_MILES,
@@ -64,34 +66,9 @@ class GeoService:
                 "raw_meters": leg1["distance_meters"] + leg2["distance_meters"],
             },
             "geometry": {
-                "polyline": leg1["polyline"] + leg2["polyline"],
+                "polyline": [leg1["polyline"], leg2["polyline"]],
+                "start_coords": leg1["start_coords"],
                 "pickup_coords": leg1["end_coords"],
-                "dropoff_coords": leg2["end_coords"],
-                "bounds": cls._calculate_bounds([leg1, leg2]),
-            },
-        }
-
-    @staticmethod
-    def _calculate_bounds(legs):
-        return {
-            "northeast": {
-                "lat": max(
-                    legs[0]["bounds"]["northeast"]["lat"],
-                    legs[1]["bounds"]["northeast"]["lat"],
-                ),
-                "lng": max(
-                    legs[0]["bounds"]["northeast"]["lng"],
-                    legs[1]["bounds"]["northeast"]["lng"],
-                ),
-            },
-            "southwest": {
-                "lat": min(
-                    legs[0]["bounds"]["southwest"]["lat"],
-                    legs[1]["bounds"]["southwest"]["lat"],
-                ),
-                "lng": min(
-                    legs[0]["bounds"]["southwest"]["lng"],
-                    legs[1]["bounds"]["southwest"]["lng"],
-                ),
+                "drop_off_coords": leg2["end_coords"],
             },
         }

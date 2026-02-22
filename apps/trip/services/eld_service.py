@@ -172,8 +172,10 @@ class EldService:
         logger.info(f"Adding loading log for Trip ID: {self.trip.id}")
         self.add_log_entry(DriverStatus.ON_DUTY, 1.0, remarks="Loading Freight")
 
-        logger.info(f"Simulating drive to dropoff location for Trip ID: {self.trip.id}")
-        self.simulate_driving(route_data["to_dropoff_miles"])
+        logger.info(
+            f"Simulating drive to drop_off location for Trip ID: {self.trip.id}"
+        )
+        self.simulate_driving(route_data["to_drop_off_miles"])
 
         logger.info(f"Adding unloading log for Trip ID: {self.trip.id}")
         self.add_log_entry(DriverStatus.ON_DUTY, 1.0, remarks="Unloading Freight")
@@ -184,10 +186,11 @@ class EldService:
     def generate_full_trip(self):
         logger.info(f"Generating full trip for Trip ID: {self.trip.id}")
         route_data = GeoService.get_route_data(
-            self.trip.current_location,
-            self.trip.pickup_location,
-            self.trip.dropoff_location,
+            self.trip.start_address,
+            self.trip.pickup_address,
+            self.trip.drop_off_address,
         )
         self.trip.route_geometry = route_data["geometry"]
-        self.trip.save()
+        self.trip.metrics = route_data["metrics"]
+        self.trip.save(update_fields=["route_geometry", "metrics", "updated_at"])
         self.generate_trip(route_data["metrics"])

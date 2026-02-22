@@ -32,8 +32,8 @@ class TripListSerializer(ModelSerializer):
         model = Trip
         fields = [
             "id",
-            "current_location",
-            "pickup_location",
-            "dropoff_location",
+            "start_address",
+            "pickup_address",
+            "drop_off_address",
             "created_at",
         ]
